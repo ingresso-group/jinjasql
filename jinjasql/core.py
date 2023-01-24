@@ -1,19 +1,14 @@
 from __future__ import unicode_literals
-from jinja2 import Environment
-from jinja2 import Template
+
+from collections import OrderedDict
+from collections.abc import Iterable
+from random import Random
+from threading import local
+
+from jinja2 import Environment, Template
 from jinja2.ext import Extension
 from jinja2.lexer import Token
-from jinja2.utils import Markup
-from collections.abc import Iterable
-
-try:
-    from collections import OrderedDict
-except ImportError:
-    # For Python 2.6 and less
-    from ordereddict import OrderedDict
-
-from threading import local
-from random import Random
+from markupsafe import Markup
 
 _thread_local = local()
 
@@ -46,18 +41,18 @@ class SqlExtension(Extension):
 
     def filter_stream(self, stream):
         """
-        We convert 
+        We convert
         {{ some.variable | filter1 | filter 2}}
-            to 
+            to
         {{ ( some.variable | filter1 | filter 2 ) | bind}}
-        
+
         ... for all variable declarations in the template
 
         Note the extra ( and ). We want the | bind to apply to the entire value, not just the last value.
         The parentheses are mostly redundant, except in expressions like {{ '%' ~ myval ~ '%' }}
 
-        This function is called by jinja2 immediately 
-        after the lexing stage, but before the parser is called. 
+        This function is called by jinja2 immediately
+        after the lexing stage, but before the parser is called.
         """
         while not stream.eos:
             token = next(stream)
@@ -71,10 +66,10 @@ class SqlExtension(Extension):
                 last_token = var_expr[-1]
                 lineno = last_token.lineno
                 # don't bind twice
-                if (not last_token.test("name") 
+                if (not last_token.test("name")
                     or not last_token.value in ('bind', 'inclause', 'sqlsafe')):
                     param_name = self.extract_param_name(var_expr)
-                    
+
                     var_expr.insert(1, Token(lineno, 'lparen', u'('))
                     var_expr.append(Token(lineno, 'rparen', u')'))
                     var_expr.append(Token(lineno, 'pipe', u'|'))
@@ -95,23 +90,23 @@ def sql_safe(value):
     return Markup(value)
 
 def bind(value, name):
-    """A filter that prints %s, and stores the value 
+    """A filter that prints %s, and stores the value
     in an array, so that it can be bound using a prepared statement
 
-    This filter is automatically applied to every {{variable}} 
+    This filter is automatically applied to every {{variable}}
     during the lexing stage, so developers can't forget to bind
     """
     if isinstance(value, Markup):
         return value
     else:
         return _bind_param(_thread_local.bind_params, name, value)
-    
+
 def bind_in_clause(value):
     values = list(value)
     results = []
     for v in values:
         results.append(_bind_param(_thread_local.bind_params, "inclause", v))
-    
+
     clause = ",".join(results)
     clause = "(" + clause + ")"
     return clause
@@ -120,7 +115,7 @@ def _bind_param(already_bound, key, value):
     _thread_local.param_index += 1
     new_key = "%s_%s" % (key, _thread_local.param_index)
     already_bound[new_key] = value
-    
+
     param_style = _thread_local.param_style
     if param_style == 'qmark':
         return "?"
@@ -173,7 +168,7 @@ class JinjaSql(object):
     def __init__(self, env=None, param_style='format', identifier_quote_character='"'):
         self.param_style = param_style
         if identifier_quote_character not in self.VALID_ID_QUOTE_CHARS:
-            raise ValueError("identifier_quote_characters must be one of " + VALID_ID_QUOTE_CHARS)
+            raise ValueError("identifier_quote_characters must be one of " + self.VALID_ID_QUOTE_CHARS)
         self.identifier_quote_character = identifier_quote_character
         self.env = env or Environment()
         self._prepare_environment()
@@ -181,7 +176,6 @@ class JinjaSql(object):
     def _prepare_environment(self):
         self.env.autoescape=True
         self.env.add_extension(SqlExtension)
-        self.env.add_extension('jinja2.ext.autoescape')
         self.env.filters["bind"] = bind
         self.env.filters["sqlsafe"] = sql_safe
         self.env.filters["inclause"] = bind_in_clause

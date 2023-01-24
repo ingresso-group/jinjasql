@@ -4,21 +4,21 @@ import os
 # Duplicating version from jinjasql.__init__.py
 # We can't directly import it from jinjasql,
 # because during installation Jinja2 isn't installed as yet
-# 
+#
 # There are several approaches to eliminate this redundancy,
 # see https://packaging.python.org/single_source_version/
 # but for now, we will simply maintain it in two places
-__version__ = '0.1.8'
+__version__ = '0.1.9'
 
 long_description = '''
 Generate SQL Queries using a Jinja Template, without worrying about SQL Injection
 
 JinjaSQL automatically binds parameters that are inserted into the template.
 After JinjaSQL evaluates the template, you get 1) Query with placeholders
-for parameters, and 2) List of values that need to be bound to the query. 
+for parameters, and 2) List of values that need to be bound to the query.
 
-JinjaSQL doesn't actually execute the query - it only prepares the 
-query and the bind parameters. You can execute the query using any 
+JinjaSQL doesn't actually execute the query - it only prepares the
+query and the bind parameters. You can execute the query using any
 database engine / driver you are working with.
 
 '''
@@ -39,7 +39,7 @@ sdict = {
     'packages' : ['jinjasql'],
     'test_suite' : 'tests.all_tests',
     'install_requires': [
-        'Jinja2>=2.5,<3.0'
+        'Jinja2>=2.8'
     ],
     'classifiers' : [
         'Development Status :: 4 - Beta',
